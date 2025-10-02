@@ -31,7 +31,6 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
-# Verificar se o Zsh está instalado
 if ! command -v zsh &> /dev/null; then
     echo -e "${YELLOW}Zsh não encontrado. Instalando...${NC}"
     if command -v apt &> /dev/null; then
@@ -78,6 +77,14 @@ else
     echo -e "${YELLOW}zsh-syntax-highlighting já está instalado${NC}"
 fi
 
+# Instalar zsh-history-substring-search
+if [ ! -d "${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-history-substring-search" ]; then
+    echo -e "${GREEN}Instalando zsh-history-substring-search...${NC}"
+    git clone https://github.com/zsh-users/zsh-history-substring-search ${ZSH_CUSTOM:-$HOME/.oh-my-zsh/custom}/plugins/zsh-history-substring-search
+else
+    echo -e "${YELLOW}zsh-history-substring-search já está instalado${NC}"
+fi
+
 # Backup do .zshrc existente
 if [ -f "$HOME/.zshrc" ]; then
     echo -e "${YELLOW}Fazendo backup do .zshrc existente...${NC}"
@@ -91,7 +98,6 @@ if curl -fsSL "${REPO_URL}/.zshrc" -o "$HOME/.zshrc"; then
 else
     echo -e "${YELLOW}⚠️  Erro ao baixar .zshrc. Usando configuração padrão...${NC}"
     cat > "$HOME/.zshrc" << 'EOF'
-    
 # Enable Powerlevel10k instant prompt
 if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
   source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
@@ -104,13 +110,17 @@ plugins=(
     git
     zsh-autosuggestions
     zsh-syntax-highlighting
+    dirhistory
+    zsh-history-substring-search
 )
 
 source $ZSH/oh-my-zsh.sh
 [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+source $ZSH_CUSTOM/plugins/zsh-history-substring-search/zsh-history-substring-search.zsh
+bindkey "$terminfo[kcuu1]" history-substring-search-up
+bindkey "$terminfo[kcud1]" history-substring-search-down
 export PATH="$HOME/.local/bin:$PATH"
 EOF
-
 fi
 
 # Backup do .p10k.zsh existente
