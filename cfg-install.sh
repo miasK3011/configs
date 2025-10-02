@@ -31,19 +31,64 @@ GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
 NC='\033[0m' # No Color
 
+# Detectar sistema operacional
+OS="$(uname -s)"
+echo -e "${GREEN}Sistema detectado: ${OS}${NC}"
+
+# Verificar se o Zsh está instalado
 if ! command -v zsh &> /dev/null; then
     echo -e "${YELLOW}Zsh não encontrado. Instalando...${NC}"
-    if command -v apt &> /dev/null; then
-        sudo apt update && sudo apt install -y zsh
-    elif command -v dnf &> /dev/null; then
-        sudo dnf install -y zsh
-    elif command -v pacman &> /dev/null; then
-        sudo pacman -S --noconfirm zsh
-    else
-        echo "Por favor, instale o Zsh manualmente"
-        exit 1
-    fi
+    case "$OS" in
+        Linux*)
+            if command -v apt &> /dev/null; then
+                sudo apt update && sudo apt install -y zsh curl git
+            elif command -v dnf &> /dev/null; then
+                sudo dnf install -y zsh curl git
+            elif command -v pacman &> /dev/null; then
+                sudo pacman -S --noconfirm zsh curl git
+            else
+                echo "Distribuição não suportada. Por favor, instale o Zsh manualmente"
+                exit 1
+            fi
+            ;;
+        Darwin*)
+            if command -v brew &> /dev/null; then
+                brew install zsh
+            else
+                echo "Homebrew não encontrado. Instalando Homebrew primeiro..."
+                /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+                brew install zsh
+            fi
+            ;;
+        *)
+            echo "Sistema operacional não suportado: $OS"
+            exit 1
+            ;;
+    esac
+else
+    echo -e "${GREEN}Zsh já está instalado${NC}"
 fi
+
+# Verificar se curl e git estão instalados
+for cmd in curl git; do
+    if ! command -v $cmd &> /dev/null; then
+        echo -e "${YELLOW}Instalando $cmd...${NC}"
+        case "$OS" in
+            Linux*)
+                if command -v apt &> /dev/null; then
+                    sudo apt install -y $cmd
+                elif command -v dnf &> /dev/null; then
+                    sudo dnf install -y $cmd
+                elif command -v pacman &> /dev/null; then
+                    sudo pacman -S --noconfirm $cmd
+                fi
+                ;;
+            Darwin*)
+                brew install $cmd
+                ;;
+        esac
+    fi
+done
 
 # Instalar Oh My Zsh
 if [ ! -d "$HOME/.oh-my-zsh" ]; then
@@ -141,11 +186,32 @@ fi
 # Definir Zsh como shell padrão
 if [ "$SHELL" != "$(which zsh)" ]; then
     echo -e "${GREEN}Definindo Zsh como shell padrão...${NC}"
-    chsh -s $(which zsh)
-    echo -e "${YELLOW}Você precisará fazer logout e login novamente para aplicar a mudança${NC}"
+    case "$OS" in
+        Linux*)
+            chsh -s $(which zsh)
+            echo -e "${YELLOW}Você precisará fazer logout e login novamente para aplicar a mudança${NC}"
+            ;;
+        Darwin*)
+            # No macOS, precisa adicionar o zsh ao /etc/shells primeiro (se não estiver)
+            if ! grep -q "$(which zsh)" /etc/shells; then
+                echo "$(which zsh)" | sudo tee -a /etc/shells
+            fi
+            chsh -s $(which zsh)
+            echo -e "${YELLOW}Feche e abra o Terminal novamente para aplicar a mudança${NC}"
+            ;;
+    esac
 fi
 
 echo ""
 echo -e "${GREEN}✅ Configuração concluída!${NC}"
 echo -e "${YELLOW}Para aplicar as mudanças, execute: source ~/.zshrc${NC}"
 echo -e "${YELLOW}Ou abra um novo terminal${NC}"
+
+# Dica específica para macOS
+if [ "$OS" = "Darwin" ]; then
+    echo ""
+    echo -e "${GREEN}💡 Dica para macOS:${NC}"
+    echo -e "${YELLOW}Instale fontes com ícones para o Powerlevel10k funcionar perfeitamente:${NC}"
+    echo -e "${YELLOW}brew tap homebrew/cask-fonts${NC}"
+    echo -e "${YELLOW}brew install --cask font-meslo-lg-nerd-font${NC}"
+fi
